@@ -18,7 +18,7 @@ const initialState =
 	frameRate                 : config.frameRate,
 	screenSharingResolution   : config.screenResolution,
 	screenSharingFrameRate    : config.screenSharingFrameRate,
-	recorderPreferredMimeType : window.config.defaultRecorderMimeType || 'video/webm',
+	recorderPreferredMimeType : config.defaultRecorderMimeType || 'video/webm',
 	lastN                     : 4,
 	permanentTopBar           : true,
 	hiddenControls            : false,
