@@ -219,16 +219,16 @@ export default class BrowserRecorder
 	}
 
 	// save recording and destroy
-	saveRecordingAndCleanup(blobs, db, dbName)
+	saveRecordingAndCleanup(blobs)
 	{
 		// merge blob
 		const blob = new Blob(blobs, { type: this.recordingMimeType });
 
 		// save as
-		this.invokeSaveAsDialog(blob, `${dbName}.webm`);
+		this.invokeSaveAsDialog(blob, `${this.fileName}`);
 
 		// destroy
-		this.saveRecordingCleanup(db, dbName);
+		this.saveRecordingCleanup();
 	}
 
 	// save recording and destroy
@@ -685,5 +685,23 @@ export default class BrowserRecorder
 		}
 		URL.revokeObjectURL(link.href);
 
+	}
+	recoverRecording(dbName)
+	{
+		try
+		{
+			openDB(dbName, 1).then((db) =>
+			{
+				db.getAll(this.idbStoreName).then((blobs) =>
+				{
+					this.saveRecordingAndCleanup(blobs);
+				});
+			}
+			);
+		}
+		catch (error)
+		{
+			this.logger.error('Error during save recovered recording error: %O', error);
+		}
 	}
 }
