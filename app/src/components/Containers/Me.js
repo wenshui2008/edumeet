@@ -3,7 +3,8 @@ import { connect } from 'react-redux';
 import {
 	meProducersSelector,
 	makePermissionSelector,
-	recordingConsentsPeersSelector
+	recordingConsentsPeersSelector,
+	showVodSelect
 } from '../../store/selectors';
 import { permissions } from '../../permissions';
 import { withRoomContext } from '../../RoomContext';
@@ -60,6 +61,10 @@ const styles = (theme) =>
 			'&.screen' :
 			{
 				order : 2
+			},
+			'&.vod' :
+			{
+				order : 3
 			}
 		},
 		viewContainer :
@@ -172,7 +177,8 @@ const Me = (props) =>
 		classes,
 		theme,
 		recordingConsents,
-		localRecordingState
+		localRecordingState,
+		vodObject
 	} = props;
 
 	// const width = style.width;
@@ -1018,6 +1024,21 @@ const Me = (props) =>
 					</div>
 				</div>
 			}
+			{(vodObject !== null) && (vodObject.peerId === me.id) &&
+			<div className={classnames(classes.root, 'vod')} style={spacingStyle}>
+				<div className={classes.viewContainer} style={style}>
+					<VideoView
+						isMe
+						isVod
+						vodObject={vodObject}
+						vodOnEvent={(time, event) =>
+						{
+							roomClient.updateVod(time, event);
+						}}
+					/>
+				</div>
+			</div>
+			}
 		</React.Fragment>
 	);
 };
@@ -1043,7 +1064,8 @@ Me.propTypes =
 	theme               : PropTypes.object.isRequired,
 	transports          : PropTypes.object.isRequired,
 	localRecordingState : PropTypes.string,
-	recordingConsents   : PropTypes.array
+	recordingConsents   : PropTypes.array,
+	vodObject           : PropTypes.object
 };
 
 const makeMapStateToProps = () =>
@@ -1080,7 +1102,8 @@ const makeMapStateToProps = () =>
 			noiseVolume         : noise,
 			transports          : state.transports,
 			localRecordingState : state.recorder.localRecordingState.status,
-			recordingConsents   : recordingConsentsPeersSelector(state)
+			recordingConsents   : recordingConsentsPeersSelector(state),
+			vodObject           : showVodSelect(state)
 		};
 	};
 
