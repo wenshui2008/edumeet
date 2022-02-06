@@ -4,6 +4,7 @@ node_modules/
 /app/public/config/config.js
 /app/public/images/logo.*
 !/app/public/images/logo.edumeet.svg
+/app/utils/translations/tmp/dump.json
 /server/config/
 !/server/config/config.example.js
 /server/public/
