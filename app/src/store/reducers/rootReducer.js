@@ -9,6 +9,7 @@ import lobbyPeers from './lobbyPeers';
 import peerVolumes from './peerVolumes';
 import notifications from './notifications';
 import toolarea from './toolarea';
+import vod from './vod';
 import chat from './chat';
 import files from './files';
 import recorder from './recorder';
@@ -31,6 +32,7 @@ export default combineReducers({
 	chat,
 	files,
 	recorder,
+	vod,
 	settings,
 	config,
 	intl

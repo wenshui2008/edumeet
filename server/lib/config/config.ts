@@ -22,6 +22,7 @@ import {
 	MODERATE_CHAT,
 	SHARE_AUDIO,
 	SHARE_VIDEO,
+	SHARE_VOD,
 	SHARE_SCREEN,
 	EXTRA_VIDEO,
 	SHARE_FILE,
@@ -456,6 +457,8 @@ const configSchema = convict({
 			[SHARE_AUDIO]      : [ userRoles.NORMAL ],
 			// The role(s) have permission to share video
 			[SHARE_VIDEO]      : [ userRoles.NORMAL ],
+			// The role(s) have permission to share vod
+			[SHARE_VOD]        : [ userRoles.PRESENTER ],
 			// The role(s) have permission to share screen
 			[SHARE_SCREEN]     : [ userRoles.NORMAL ],
 			// The role(s) have permission to produce extra video
@@ -477,6 +480,56 @@ const configSchema = convict({
 		doc     : 'Allow when role missing.',
 		format  : Array,
 		default : [ CHANGE_ROOM_LOCK ]
+	},
+	vod : {
+		enabled : {
+			doc     : 'Enable/Disable vod player',
+			format  : Boolean,
+			default : true
+		},
+		upload : {
+			dir : {
+				path : {
+					doc     : 'Path to store uploaded files',
+					format  : String,
+					default : 'tmp/'
+				},
+				size : {
+					doc     : 'Maximum disk space for uploading files.',
+					format  : Number,
+					default : 20 // GB
+				}
+			},
+			files : {
+				rules : {
+					types : {
+						doc     : 'Files format allowed to be uploaded.',
+						format  : Array,
+						default : [ 'video/mp4' ]
+					},
+					maxSize : {
+						doc     : 'Maximum file size allowed to be uploaded.',
+						format  : Number,
+						default : 0.5 // GB
+					},
+					limitPerPeer : {
+						doc     : 'Maximum number of files uploaded by peer in on room',
+						format  : Number,
+						default : 2
+					}
+				}
+			},
+			stream : {
+				options : {
+					highWaterMark : {
+						doc     : 'https://nodejs.org/api/stream.html#buffering',
+						format  : Number,
+						default : 1048576 * 2 // B * n
+					}
+				}
+			}
+		}
+
 	}
 });
 

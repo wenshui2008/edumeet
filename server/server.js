@@ -16,6 +16,7 @@ const promExporter = require('./lib/stats/promExporter');
 
 const bcrypt = require('bcrypt');
 const fs = require('fs');
+const path = require('path');
 const http = require('http');
 const https = require('https');
 
@@ -613,6 +614,11 @@ async function runHttpsServer()
 
 	app.use('/.well-known/acme-challenge', express.static('dist/public/.well-known/acme-challenge'));
 
+	app.use(
+		path.join('/', config.vod.upload.dir.path),
+		express.static(config.vod.upload.dir.path.replace(/^\//, ''))
+	);
+
 	app.all('*', async (req, res, next) =>
 	{
 		if (req.secure || config.httpOnly)
@@ -711,9 +717,9 @@ function isPathAlreadyTaken(actualUrl)
 			'/auth/'
 		];
 
-	alreadyTakenPath.forEach((path) =>
+	alreadyTakenPath.forEach((takenPath) =>
 	{
-		if (actualUrl.toString().startsWith(path))
+		if (actualUrl.toString().startsWith(takenPath))
 			return true;
 	});
 

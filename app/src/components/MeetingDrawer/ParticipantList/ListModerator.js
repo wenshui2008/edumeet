@@ -5,7 +5,6 @@ import PropTypes from 'prop-types';
 import { withRoomContext } from '../../../RoomContext';
 import { useIntl, FormattedMessage } from 'react-intl';
 import Button from '@material-ui/core/Button';
-import { showVodSelect } from '../../Selectors';
 
 const styles = (theme) =>
 	({
@@ -32,14 +31,9 @@ const ListModerator = (props) =>
 	const {
 		roomClient,
 		room,
-		classes,
-		vodObject
+		vod,
+		classes
 	} = props;
-
-	const isVodShown = (vodObject !== null);
-
-	// TODO-VoDSync - change the hardcoded value to something from gui
-	const showVodButton = true;
 
 	return (
 		<div className={classes.root}>
@@ -107,42 +101,6 @@ const ListModerator = (props) =>
 					defaultMessage='Close meeting'
 				/>
 			</Button>
-			{showVodButton && isVodShown &&
-			<Button
-				aria-label={intl.formatMessage({
-					id             : 'room.hideVod',
-					defaultMessage : 'Hide VoD'
-				})}
-				className={classes.button}
-				variant='contained'
-				color='secondary'
-				disabled={room.toggleVodInProgress}
-				onClick={() => roomClient.toggleVod()}
-			>
-				<FormattedMessage
-					id='room.hideVod'
-					defaultMessage='Hide VoD'
-				/>
-			</Button>
-			}
-			{showVodButton && !isVodShown &&
-			<Button
-				aria-label={intl.formatMessage({
-					id             : 'room.showVod',
-					defaultMessage : 'Show VoD'
-				})}
-				className={classes.button}
-				variant='contained'
-				color='secondary'
-				disabled={room.toggleVodInProgress}
-				onClick={() => roomClient.toggleVod()}
-			>
-				<FormattedMessage
-					id='room.showVod'
-					defaultMessage='Show VoD'
-				/>
-			</Button>
-			}
 		</div>
 	);
 };
@@ -151,13 +109,13 @@ ListModerator.propTypes =
 {
 	roomClient : PropTypes.any.isRequired,
 	room       : PropTypes.object.isRequired,
-	classes    : PropTypes.object.isRequired,
-	vodObject  : PropTypes.object.isRequired
+	vod        : PropTypes.object.isRequired,
+	classes    : PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
-	room      : state.room,
-	vodObject : showVodSelect(state)
+	room : state.room,
+	vod  : state.vod
 });
 
 export default withRoomContext(connect(
@@ -168,7 +126,8 @@ export default withRoomContext(connect(
 		areStatesEqual : (next, prev) =>
 		{
 			return (
-				prev.room === next.room
+				prev.room === next.room &&
+				prev.vod === next.vod
 			);
 		}
 	}

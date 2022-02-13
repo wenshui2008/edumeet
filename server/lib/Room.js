@@ -8,6 +8,9 @@ const { SocketTimeoutError, NotFoundInMediasoupError } = require('./helpers/erro
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const userRoles = require('./access/roles');
+const ss = require('socket.io-stream');
+
+import VodUpload from './Vod/Upload';
 
 import {
 	BYPASS_ROOM_LOCK,
@@ -22,6 +25,7 @@ const permissions = require('./access/perms'), {
 	MODERATE_CHAT,
 	SHARE_AUDIO,
 	SHARE_VIDEO,
+	SHARE_VOD,
 	SHARE_SCREEN,
 	EXTRA_VIDEO,
 	SHARE_FILE,
@@ -51,6 +55,7 @@ const roomPermissions =
 	[MODERATE_CHAT]     : [ userRoles.MODERATOR ],
 	[SHARE_AUDIO]       : [ userRoles.NORMAL ],
 	[SHARE_VIDEO]       : [ userRoles.NORMAL ],
+	[SHARE_VOD]         : [ userRoles.PRESENTER ],
 	[SHARE_SCREEN]      : [ userRoles.NORMAL ],
 	[EXTRA_VIDEO]       : [ userRoles.NORMAL ],
 	[SHARE_FILE]        : [ userRoles.NORMAL ],
@@ -262,7 +267,9 @@ class Room extends EventEmitter
 
 		this._fileHistory = [];
 
-		this._vodHistory = null;
+		this._vod = null;
+
+		this._vodUpload = new VodUpload();
 
 		this._lastN = [];
 
@@ -312,7 +319,7 @@ class Room extends EventEmitter
 
 		this._fileHistory = null;
 
-		this._vodHistory = null;
+		this._vod = null;
 
 		this._lobby.close();
 
@@ -792,6 +799,48 @@ class Room extends EventEmitter
 			}, true, true);
 		});
 
+		ss(peer.socket).on('addVodFileStream', (stream, data2) =>
+		{
+			if (!this._hasPermission(peer, SHARE_VOD))
+				throw new Error('peer not authorized');
+
+			const { name, type, size, data, roomId, peerId, hash } = data2;
+
+			const fullName = `room_${roomId}_peer_${peerId}_hash_${hash}_${name}`.replace(/[^A-Za-z0-9._-]+/g, '');
+
+			this._vodUpload.refresh();
+
+			const rules = {
+				isDirFree          : this._vodUpload.isDirFree(size),
+				isFileSizeOk       : this._vodUpload.isFileSizeOk(size),
+				isFileTypeOk       : this._vodUpload.isFileTypeOk(type),
+				isFileNotOverLimit : this._vodUpload.isFileNotOverLimit(roomId, peerId)
+			};
+
+			const allRulesMet = Object.values(rules).every(Boolean);
+
+			if (allRulesMet)
+			{
+				const url = this._vodUpload.saveFile(fullName, stream);
+
+				this._notification(peer.socket, 'addVodFile', {
+					name, type, size, url, hash
+				}, false, false);
+
+				/* 
+				stream.on('end', () =>
+				{
+				
+				}); 
+				*/
+			}
+
+			else
+			{
+				this._notification(peer.socket, 'notifyVodAddFileRules', { ...rules }, false, false);
+			}
+		});
+
 		peer.socket.on('request', (request, cb) =>
 		{
 			logger.debug(
@@ -830,10 +879,12 @@ class Room extends EventEmitter
 		if (peer.joined)
 			this._notification(peer.socket, 'peerClosed', { peerId: peer.id }, true);
 
-		if (this._vodHistory && this._vodHistory.peerId === peer.id)
+		if (this._vod && this._vod.peerId === peer.id)
 		{
-			this._vodHistory = null;
+			this._vod = null;
 		}
+
+		this._vodUpload.removePeerAllFiles(this._roomId, peer.id);
 
 		// Remove from lastN
 		this._lastN = this._lastN.filter((id) => id !== peer.id);
@@ -922,20 +973,15 @@ class Room extends EventEmitter
 					lobbyPeers = this._lobby.peerList();
 
 				// Make a copy in order not to change the stored object 
-				let vodObject = null;
+				const vod = (this._vod) ? { ...this._vod } : null;
 
-				if (this._vodHistory)
+				if (vod && vod.isPlaying)
 				{
-					vodObject = Object.assign({}, this._vodHistory);
-				}
+					// the +1000 ms is a magic number, as we cannot know exactly 
+					// the transmission and processing time
+					const offset = (Date.now() - vod.startPlayTimestamp + 1000) / 1000;
 
-				if (vodObject && vodObject.isPlaying)
-				{
-					// the +1000 ms is a magic number, as we cannot know exactly the transmission 
-					// and processing time
-					const vodOffset = (Date.now() - vodObject.startPlayTimestamp + 1000) / 1000;
-
-					vodObject.time = vodObject.time + vodOffset;
+					vod.time = vod.time + offset;
 				}
 
 				cb(null, {
@@ -948,11 +994,19 @@ class Room extends EventEmitter
 					allowWhenRoleMissing : roomAllowWhenRoleMissing,
 					chatHistory          : this._chatHistory,
 					fileHistory          : this._fileHistory,
-					vodHistory           : vodObject,
-					lastNHistory         : this._lastN,
-					locked               : this._locked,
-					lobbyPeers           : lobbyPeers,
-					accessCode           : this._accessCode
+					vod                  :
+					{
+						config : {
+							enabled       : config.vod.enabled,
+							limitPerPeer  : config.vod.upload.files.rules.limitPerPeer,
+							highWaterMark : config.vod.upload.stream.options.highWaterMark
+						},
+						loadedVideo : vod
+					},
+					lastNHistory : this._lastN,
+					locked       : this._locked,
+					lobbyPeers   : lobbyPeers,
+					accessCode   : this._accessCode
 				});
 
 				// Mark the new Peer as joined.
@@ -1797,71 +1851,107 @@ class Room extends EventEmitter
 				break;
 			}
 
-			case 'moderator:updateVod':
+			case 'loadVod':
 			{
-				// TODO-VoDSync a new permission for VoD sync showing should be introduced
-				// or now permission at all should be required
-				if (!this._hasPermission(peer, MODERATE_ROOM))
-					throw new Error('peer not authorized');
-
-				const { vodObject } = request.data;
-
-				if (!this._vodHistory || this._vodHistory.peerId !== peer.id)
-					throw new Error('peer not authorized to change vod state');
-
-				if (!this._vodHistory.isPlaying && vodObject.isPlaying)
+				if (config.vod.enabled)
 				{
-					vodObject.startPlayTimestamp = Date.now();
-				}
+					if (!this._hasPermission(peer, SHARE_VOD))
+						throw new Error('peer not authorized');
 
-				if (this._vodHistory.isPlaying && !vodObject.isPlaying)
-				{
-					vodObject.startPlayTimestamp = 0;
-				}
+					const { loadedVideo } = request.data;
 
-				this._vodHistory = vodObject;
-
-				// Spread to others
-				this._notification(peer.socket, 'updateVod', {
-					vodObject : vodObject
-				}, true);
-
-				// Return no error
-				cb();
-
-				break;
-			}
-
-			case 'moderator:toggleVod':
-			{
-				// TODO-VoDSync a new permission for VoD sync showing should be introduced
-				// or now permission at all should be required
-				if (!this._hasPermission(peer, MODERATE_ROOM))
-					throw new Error('peer not authorized');
-
-				const { vodObject } = request.data;
-
-				if (vodObject === null)
-				{
-					this._vodHistory = null;
-
-					// Spread to others
-					this._notification(peer.socket, 'closeVod', null, true);
-				}
-				else
-				{
-					this._vodHistory = vodObject;
+					this._vod = loadedVideo;
 
 					// Spread to others
 					this._notification(peer.socket, 'updateVod', {
-						vodObject : vodObject
+						loadedVideo
 					}, true);
-				}
-				// Return no error
-				cb();
 
+					// Return no error
+					cb();
+				}
 				break;
 			}
+
+			case 'updateVod':
+			{
+
+				if (config.vod.enabled)
+				{
+					if (!this._hasPermission(peer, SHARE_VOD))
+						throw new Error('peer not authorized');
+
+					const { loadedVideo } = request.data;
+
+					if (!this._vod || this._vod.peerId !== peer.id)
+						throw new Error('peer not authorized to change vod state');
+
+					if (!this._vod.isPlaying && loadedVideo.isPlaying)
+					{
+						loadedVideo.startPlayTimestamp = Date.now();
+					}
+
+					if (this._vod.isPlaying && !loadedVideo.isPlaying)
+					{
+						loadedVideo.startPlayTimestamp = 0;
+					}
+
+					this._vod = loadedVideo;
+
+					// Spread to others
+					this._notification(peer.socket, 'updateVod', {
+						loadedVideo
+					}, true, true);
+
+					// Return no error
+					cb();
+				}
+				break;
+			}
+
+			case 'unloadVod':
+			{
+				if (config.vod.enabled)
+				{
+					if (!this._hasPermission(peer, SHARE_VOD))
+						throw new Error('peer not authorized');
+
+					this._vod = null;
+
+					// Spread to others
+					this._notification(peer.socket, 'unloadVod', null, true);
+
+					// Return no error
+					cb();
+				}
+				break;
+			}
+
+			case 'removeVodFile':
+			{
+				if (config.vod.enabled)
+				{
+					if (!this._hasPermission(peer, SHARE_VOD))
+						throw new Error('peer not authorized');
+
+					const { name, roomId, peerId, hash } = request.data;
+
+					this._vodUpload.refresh();
+
+					const fullName = `room_${roomId}_peer_${peerId}_hash_${hash}_${name}`
+						.replace(/[^A-Za-z0-9._-]+/g, '');
+
+					this._vodUpload.removeFile(fullName);
+
+					// Spread to others
+					this._notification(peer.socket, 'removeVodFile', { hash }, false, false);
+
+					// Return no error
+					cb();
+				}
+				break;
+			}
+			// </vod>
 
 			case 'moderator:stopAllScreenSharing':
 			{
