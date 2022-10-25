@@ -1421,14 +1421,21 @@ class Room extends EventEmitter
 				if (!this._hasPermission(peer, SEND_CHAT))
 					throw new Error('peer not authorized');
 
-				const { chatMessage } = request.data;
+				const { text } = request.data;
 
-				this._chatHistory.push(chatMessage);
+				const newChatMessage = {
+					text,
+					peerId : peer.id,
+					displayName : peer.displayName,
+					timestamp : Date.now()
+				};
+
+				this._chatHistory.push(newChatMessage);
 
 				// Spread to others
 				this._notification(peer.socket, 'chatMessage', {
 					peerId      : peer.id,
-					chatMessage : chatMessage
+					chatMessage : newChatMessage
 				}, true);
 
 				// Return no error
@@ -1500,15 +1507,26 @@ class Room extends EventEmitter
 				if (!this._hasPermission(peer, MODERATE_CHAT))
 					throw new Error('peer not authorized');
 
+				this._chatHistory = [];
+
+				// Spread to others
+				this._notification(peer.socket, 'moderator:clearChat', null, true);
+
+				// Return no error
+				cb();
+
+				break;
+			}
+
+			case 'moderator:clearFiles':
+			{
 				if (!this._hasPermission(peer, MODERATE_FILES))
 					throw new Error('peer not authorized');
-
-				this._chatHistory = [];
 
 				this._fileHistory = [];
 
 				// Spread to others
-				this._notification(peer.socket, 'moderator:clearChat', null, true);
+				this._notification(peer.socket, 'moderator:clearFiles', null, true);
 
 				// Return no error
 				cb();
@@ -1670,14 +1688,21 @@ class Room extends EventEmitter
 					throw new Error('peer not authorized');
 
 				// const { magnetUri, time } = request.data;
-				const file = request.data;
+				const { magnetURI } = request.data;
 
-				this._fileHistory.push({ ...file });
+				const newFile = {
+					magnetURI,
+					peerId : peer.id,
+					displayName : peer.displayName,
+					timestamp : Date.now()
+				};
+
+				this._fileHistory.push({ ...newFile });
 
 				// Spread to others
 				this._notification(
 					peer.socket,
-					'sendFile', { ...file },
+					'sendFile', { file: newFile },
 					true
 				);
 
