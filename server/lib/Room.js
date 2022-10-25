@@ -1274,7 +1274,7 @@ class Room extends EventEmitter
 				break;
 			}
 
-			case 'setConsumerPreferedLayers':
+			case 'setConsumerPreferredLayers':
 			{
 				// Ensure the Peer is joined.
 				if (!peer.joined)
