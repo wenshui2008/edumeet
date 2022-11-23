@@ -16,12 +16,17 @@ Try it online at [letsmeet.no](https://letsmeet.no)
 | **Authentication**  | Supported types: **OIDC**, **SAML**, **local db (text-based)** |
 
 
-### Internationalization (22 languages) 
+## Internationalization (22 languages) 
 <details>
   <summary>Help us with translations:exclamation:</summary>
-  
-  #### How to contribute?
-	
+
+  ### How to contribute?
+
+  Try our web based translation service:
+    https://translator.letsmeet.hu/
+    
+  Or manually:
+
   1. Continue to translate existing [language file](/app/src/intl/translations)
   2. find the _null_  values
   >	"settings.language": null,
@@ -35,7 +40,7 @@ Try it online at [letsmeet.no](https://letsmeet.no)
 </details>
 
 
-### Local Recording
+## Local Recording
 <details>
   <summary>See more</summary>
   
@@ -53,17 +58,16 @@ See more info about browsers storage limits:
 
 </details>
 
-# Topology
-![alt IMG](https://user-images.githubusercontent.com/920922/167305152-c66366c0-e921-4b74-ac39-20bce9fa20ee.png
-)
-![alt IMG2](https://user-images.githubusercontent.com/920922/167305096-17f62975-cbb9-4d4d-bdeb-af35882c9953.png
-)
-
-
-
-# Installation 
+## Installation 
 
 See here for [Docker](https://github.com/edumeet/edumeet-docker/) 
+
+## Architecture
+![alt IMG](https://user-images.githubusercontent.com/920922/167305152-c66366c0-e921-4b74-ac39-20bce9fa20ee.png
+)
+
+![alt IMG2](https://user-images.githubusercontent.com/920922/167305096-17f62975-cbb9-4d4d-bdeb-af35882c9953.png
+)
 
 
 ## Community-driven support
