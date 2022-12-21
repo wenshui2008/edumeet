@@ -1,5 +1,5 @@
 {
-  "listeningPort" : "443",
+  "listeningPort" : "8002",
   "listeningHost" : "host.domain.tld",
 
   "fileTracker" : "wss://tracker.openwebtorrent.com",

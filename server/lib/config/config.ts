@@ -200,7 +200,7 @@ const configSchema = convict({
 	listeningPort : {
 		doc     : 'The HTTPS listening port.',
 		format  : 'port',
-		default : 443
+		default : 8002
 	},
 	listeningRedirectPort : {
 		doc     : 'The HTTP server listening port used for redirecting any HTTP request to HTTPS. If 0, the redirect server is disabled.',

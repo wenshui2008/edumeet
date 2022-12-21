@@ -19,7 +19,7 @@
 | tls.cert | SSL certificate path. | `"string"` | ``"./certs/edumeet-demo-cert.pem"`` |
 | tls.key | SSL key path. | `"string"` | ``"./certs/edumeet-demo-key.pem"`` |
 | listeningHost | The listening Host or IP address. | `"string"` | ``"0.0.0.0"`` |
-| listeningPort | The HTTPS listening port. | `"port"` | ``443`` |
+| listeningPort | The HTTPS listening port. | `"port"` | ``8002`` |
 | listeningRedirectPort | The HTTP server listening port used for redirecting any HTTP request to HTTPS. If 0, the redirect server is disabled. | `"port"` | ``8080`` |
 | httpOnly | Listens only on HTTP on listeningPort; listeningRedirectPort disabled. Use case: load balancer backend. | `"boolean"` | ``false`` |
 | trustProxy | WebServer/Express trust proxy config for httpOnly mode. More infos: [expressjs](https://expressjs.com/en/guide/behind-proxies.html), [proxy-addr](https://www.npmjs.com/package/proxy-addr) | `"string"` | ``""`` |
