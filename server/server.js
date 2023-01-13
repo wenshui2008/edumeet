@@ -711,11 +711,12 @@ function isPathAlreadyTaken(actualUrl)
 			'/auth/'
 		];
 
-	alreadyTakenPath.forEach((path) =>
+	// BUG: alreadyTakenPath.forEach((path) =>
+	for(let i = 0; i < alreadyTakenPath.length; i++)
 	{
 		if (actualUrl.toString().startsWith(path))
 			return true;
-	});
+	} // );
 
 	return false;
 }
